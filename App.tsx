@@ -8,6 +8,7 @@ import { ErrorDisplay } from './components/ErrorDisplay';
 import { editImageWithNanoBanana } from './services/geminiService';
 import { HistoryDisplay } from './components/HistoryDisplay';
 import { ApiKeyInput } from './components/ApiKeyInput';
+import { ImagePreviewModal } from './components/ImagePreviewModal';
 
 const dataUrlToFile = async (dataUrl: string, filename: string): Promise<File> => {
     const res = await fetch(dataUrl);
@@ -31,6 +32,7 @@ const App: React.FC = () => {
     const [displayImageLeft, setDisplayImageLeft] = useState<string | null>(null);
     const [displayImageRight, setDisplayImageRight] = useState<string | null>(null);
     const [editedText, setEditedText] = useState<string | null>(null);
+    const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
 
     const [prompt, setPrompt] = useState<string>('');
     const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -235,13 +237,19 @@ const App: React.FC = () => {
                                         previousImage={displayImageLeft}
                                         editedImage={displayImageRight}
                                         editedText={editedText}
+                                        onPreview={setPreviewImageUrl}
                                     />
                                 )}
                                 
                                 {!isLoading && !error && displayImageLeft && !displayImageRight && (
                                    <div className="text-center text-gray-400">
                                         <h3 className="text-lg font-semibold mb-2">Image Ready for Editing</h3>
-                                        <img src={displayImageLeft} alt="Ready for editing" className="max-w-full max-h-96 rounded-lg shadow-md" />
+                                        <img 
+                                            src={displayImageLeft} 
+                                            alt="Ready for editing" 
+                                            className="max-w-full max-h-96 rounded-lg shadow-md cursor-pointer"
+                                            onClick={() => setPreviewImageUrl(displayImageLeft)}
+                                        />
                                     </div>
                                 )}
 
@@ -255,6 +263,9 @@ const App: React.FC = () => {
                     </main>
                 )}
             </div>
+            {previewImageUrl && (
+                <ImagePreviewModal imageUrl={previewImageUrl} onClose={() => setPreviewImageUrl(null)} />
+            )}
         </div>
     );
 };

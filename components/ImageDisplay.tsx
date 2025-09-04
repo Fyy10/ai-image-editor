@@ -4,9 +4,10 @@ interface ImageDisplayProps {
     previousImage: string;
     editedImage: string | null;
     editedText: string | null;
+    onPreview: (imageUrl: string) => void;
 }
 
-export const ImageDisplay: React.FC<ImageDisplayProps> = ({ previousImage, editedImage, editedText }) => {
+export const ImageDisplay: React.FC<ImageDisplayProps> = ({ previousImage, editedImage, editedText, onPreview }) => {
 
     const handleDownload = () => {
         if (!editedImage) return;
@@ -28,13 +29,23 @@ export const ImageDisplay: React.FC<ImageDisplayProps> = ({ previousImage, edite
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="text-center">
                     <h3 className="text-lg font-semibold mb-2 text-gray-300">Before</h3>
-                    <img src={previousImage} alt="Before edit" className="w-full h-auto rounded-lg shadow-lg" />
+                    <img 
+                        src={previousImage} 
+                        alt="Before edit" 
+                        className="w-full h-auto rounded-lg shadow-lg cursor-pointer"
+                        onClick={() => onPreview(previousImage)}
+                    />
                 </div>
                 <div className="text-center">
                     <h3 className="text-lg font-semibold mb-2 text-gray-300">After</h3>
                     {editedImage ? (
                         <div>
-                             <img src={editedImage} alt="Edited by AI" className="w-full h-auto rounded-lg shadow-lg" />
+                             <img 
+                                src={editedImage} 
+                                alt="Edited by AI" 
+                                className="w-full h-auto rounded-lg shadow-lg cursor-pointer"
+                                onClick={() => onPreview(editedImage)}
+                             />
                              <button
                                 onClick={handleDownload}
                                 className="mt-4 w-full bg-gradient-to-r from-green-500 to-teal-500 text-white font-bold py-3 px-4 rounded-lg hover:from-green-600 hover:to-teal-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-teal-500 transition-all duration-300 ease-in-out transform hover:scale-105"
