@@ -27,7 +27,7 @@ Follow these instructions to set up and run the project on your local machine.
 1. **Clone the repository:**
 
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/Fyy10/ai-image-editor.git
    cd ai-image-editor
    ```
 
