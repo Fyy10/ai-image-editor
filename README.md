@@ -15,7 +15,9 @@ A web UI that leverages the Google Gemini API to generate and edit images direct
 
 ## 🚀 Getting Started
 
-Follow these instructions to set up and run the project on your local machine.
+You can use this app directly at [ai-imgedit.netlify.app](https://ai-imgedit.netlify.app/).
+
+Alternatively, follow these instructions to set up and run the project on your local machine.
 
 **Prerequisites:**
 
