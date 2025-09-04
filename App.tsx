@@ -80,6 +80,16 @@ const App: React.FC = () => {
         }
     };
 
+    const handleStartOver = () => {
+        setHistory([]);
+        setCurrentIndex(-1);
+        setDisplayImageLeft(null);
+        setDisplayImageRight(null);
+        setEditedText(null);
+        setError(null);
+        setPrompt('');
+    };
+
     const handleDownload = (imageUrl: string) => {
         if (!imageUrl) return;
         const link = document.createElement('a');
@@ -233,7 +243,12 @@ const App: React.FC = () => {
     return (
         <div className="min-h-screen bg-gray-900 text-gray-100 flex flex-col items-center p-4 sm:p-8 font-sans">
             <div className="w-full max-w-5xl mx-auto">
-                <Header onManageApiKey={handleManageApiKey} apiKeyIsSet={!!apiKey} />
+                <Header 
+                    onManageApiKey={handleManageApiKey} 
+                    apiKeyIsSet={!!apiKey}
+                    onStartOver={handleStartOver}
+                    hasHistory={history.length > 0}
+                />
                 
                 {error && !isLoading && <div className="my-4"><ErrorDisplay message={error} /></div>}
 
