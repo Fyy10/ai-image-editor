@@ -1,4 +1,3 @@
-
 import React, { useRef, useState, useCallback } from 'react';
 
 interface ImageUploaderProps {
@@ -43,7 +42,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageUpload }) =
 
     return (
         <div>
-            <h2 className="text-xl font-semibold mb-3 text-gray-200">1. Upload Image</h2>
+            <h2 className="text-xl font-semibold mb-3 text-gray-200">Upload an Image (Optional)</h2>
             <input
                 type="file"
                 ref={fileInputRef}
@@ -63,7 +62,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageUpload }) =
                 <p className="mb-2 text-sm text-gray-400">
                     <span className="font-semibold text-purple-400">Click to upload</span> or drag and drop
                 </p>
-                <p className="text-xs text-gray-500">PNG, JPG or WEBP</p>
+                <p className="text-xs text-gray-500">To start by editing an existing image.</p>
                 {fileName && <p className="mt-4 text-xs text-green-400 bg-green-900/50 px-3 py-1 rounded-full">{fileName}</p>}
             </label>
         </div>

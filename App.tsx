@@ -5,7 +5,7 @@ import { PromptInput } from './components/PromptInput';
 import { ImageDisplay } from './components/ImageDisplay';
 import { Loader } from './components/Loader';
 import { ErrorDisplay } from './components/ErrorDisplay';
-import { editImageWithNanoBanana } from './services/geminiService';
+import { editImageWithNanoBanana, generateImageWithNanoBanana } from './services/geminiService';
 import { HistoryDisplay } from './components/HistoryDisplay';
 import { ApiKeyInput } from './components/ApiKeyInput';
 import { ImagePreviewModal } from './components/ImagePreviewModal';
@@ -80,6 +80,21 @@ const App: React.FC = () => {
         }
     };
 
+    const handleDownload = (imageUrl: string) => {
+        if (!imageUrl) return;
+        const link = document.createElement('a');
+        link.href = imageUrl;
+
+        const mimeType = imageUrl.substring(imageUrl.indexOf(':') + 1, imageUrl.indexOf(';'));
+        const extension = mimeType.split('/')[1] || 'png';
+        
+        link.download = `image-by-nano-banana.${extension}`;
+        
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
     const handleImageUpload = (file: File) => {
         const reader = new FileReader();
         reader.onloadend = () => {
@@ -130,53 +145,88 @@ const App: React.FC = () => {
             setError('API Key is not set. Please configure it first.');
             return;
         }
-        if (!currentImageForEditing || !prompt) {
-            setError('Please ensure an image is uploaded and provide an editing prompt.');
+        if (!prompt) {
+            setError('Please provide a prompt.');
             return;
         }
 
         setIsLoading(true);
         setError(null);
 
-        setDisplayImageLeft(currentImageForEditing.imageDataUrl);
-        setDisplayImageRight(null);
-        setEditedText(null);
-
-        try {
-            const result = await editImageWithNanoBanana(currentImageForEditing.file, prompt, apiKey);
-            
-            setDisplayImageRight(result.imageBase64);
-            setEditedText(result.text);
-
-            if (result.imageBase64) {
-                const newImageFile = await dataUrlToFile(result.imageBase64, `edited-${Date.now()}.png`);
-                
-                const newHistory = history.slice(0, currentIndex + 1);
-                
-                newHistory[currentIndex] = {
-                    ...newHistory[currentIndex],
-                    promptUsedOnThisImage: prompt,
-                };
-
-                const newHistoryItem: HistoryItem = {
-                    id: `v${newHistory.length}-${Date.now()}`,
-                    imageDataUrl: result.imageBase64,
-                    file: newImageFile,
-                };
-
-                const updatedHistory = [...newHistory, newHistoryItem];
-                setHistory(updatedHistory);
-                setCurrentIndex(updatedHistory.length - 1);
-                setPrompt('');
-            }
-        } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
-            setError(`Failed to generate image: ${errorMessage}`);
+        // If there's an image, we're editing. Otherwise, we're generating.
+        if (currentImageForEditing) {
             setDisplayImageLeft(currentImageForEditing.imageDataUrl);
             setDisplayImageRight(null);
-            console.error(err);
-        } finally {
-            setIsLoading(false);
+            setEditedText(null);
+
+            try {
+                const result = await editImageWithNanoBanana(currentImageForEditing.file, prompt, apiKey);
+                
+                setDisplayImageRight(result.imageBase64);
+                setEditedText(result.text);
+
+                if (result.imageBase64) {
+                    const newImageFile = await dataUrlToFile(result.imageBase64, `edited-${Date.now()}.png`);
+                    
+                    const newHistory = history.slice(0, currentIndex + 1);
+                    
+                    newHistory[currentIndex] = {
+                        ...newHistory[currentIndex],
+                        promptUsedOnThisImage: prompt,
+                    };
+
+                    const newHistoryItem: HistoryItem = {
+                        id: `v${newHistory.length}-${Date.now()}`,
+                        imageDataUrl: result.imageBase64,
+                        file: newImageFile,
+                    };
+
+                    const updatedHistory = [...newHistory, newHistoryItem];
+                    setHistory(updatedHistory);
+                    setCurrentIndex(updatedHistory.length - 1);
+                    setPrompt('');
+                }
+            } catch (err) {
+                const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
+                setError(`Failed to edit image: ${errorMessage}`);
+                setDisplayImageLeft(currentImageForEditing.imageDataUrl);
+                setDisplayImageRight(null);
+                console.error(err);
+            } finally {
+                setIsLoading(false);
+            }
+        } else {
+            // Generate a new image
+            setDisplayImageLeft(null);
+            setDisplayImageRight(null);
+            setEditedText(null);
+            try {
+                const result = await generateImageWithNanoBanana(prompt, apiKey);
+                
+                if (result.imageBase64) {
+                    const newImageFile = await dataUrlToFile(result.imageBase64, `generated-${Date.now()}.png`);
+                    
+                    const newHistoryItem: HistoryItem = {
+                        id: `v0-${Date.now()}`,
+                        imageDataUrl: result.imageBase64,
+                        file: newImageFile,
+                        promptUsedOnThisImage: prompt,
+                    };
+                    
+                    setHistory([newHistoryItem]);
+                    setCurrentIndex(0);
+                    setDisplayImageLeft(result.imageBase64);
+                    setDisplayImageRight(null);
+                    setEditedText(result.text);
+                    setPrompt('');
+                }
+            } catch (err) {
+                const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
+                setError(`Failed to generate image: ${errorMessage}`);
+                console.error(err);
+            } finally {
+                setIsLoading(false);
+            }
         }
     }, [currentImageForEditing, prompt, history, currentIndex, apiKey]);
 
@@ -198,34 +248,33 @@ const App: React.FC = () => {
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                             <div className="flex flex-col gap-6">
                                 <ImageUploader onImageUpload={handleImageUpload} />
-                                {history.length > 0 && (
-                                    <>
-                                        {history.length > 1 && (
-                                            <HistoryDisplay
-                                                history={history}
-                                                onRevert={handleRevertToHistory}
-                                                currentIndex={currentIndex}
-                                            />
-                                        )}
-                                        <div className="flex flex-col gap-2">
-                                            <PromptInput
-                                                prompt={prompt}
-                                                setPrompt={setPrompt}
-                                                onSubmit={handleSubmit}
-                                                isLoading={isLoading}
-                                                disabled={!currentImageForEditing}
-                                            />
-                                            {history.length > 1 && (
-                                                <button
-                                                    onClick={handleReset}
-                                                    disabled={isLoading}
-                                                    className="w-full bg-gray-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-gray-500 transition-colors duration-300 disabled:opacity-50"
-                                                >
-                                                    Reset to Original
-                                                </button>
-                                            )}
-                                        </div>
-                                    </>
+                                
+                                <div className="flex flex-col gap-2">
+                                    <PromptInput
+                                        prompt={prompt}
+                                        setPrompt={setPrompt}
+                                        onSubmit={handleSubmit}
+                                        isLoading={isLoading}
+                                        disabled={false} // Always enabled now
+                                        isEditing={!!currentImageForEditing}
+                                    />
+                                    {history.length > 1 && (
+                                        <button
+                                            onClick={handleReset}
+                                            disabled={isLoading}
+                                            className="w-full bg-gray-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-gray-500 transition-colors duration-300 disabled:opacity-50"
+                                        >
+                                            Reset to Original
+                                        </button>
+                                    )}
+                                </div>
+
+                                {history.length > 1 && (
+                                    <HistoryDisplay
+                                        history={history}
+                                        onRevert={handleRevertToHistory}
+                                        currentIndex={currentIndex}
+                                    />
                                 )}
                             </div>
 
@@ -238,6 +287,7 @@ const App: React.FC = () => {
                                         editedImage={displayImageRight}
                                         editedText={editedText}
                                         onPreview={setPreviewImageUrl}
+                                        onDownload={handleDownload}
                                     />
                                 )}
                                 
@@ -250,12 +300,19 @@ const App: React.FC = () => {
                                             className="max-w-full max-h-96 rounded-lg shadow-md cursor-pointer"
                                             onClick={() => setPreviewImageUrl(displayImageLeft)}
                                         />
+                                        <button
+                                            onClick={() => handleDownload(displayImageLeft!)}
+                                            className="mt-4 w-full bg-gradient-to-r from-green-500 to-teal-500 text-white font-bold py-3 px-4 rounded-lg hover:from-green-600 hover:to-teal-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-teal-500 transition-all duration-300 ease-in-out transform hover:scale-105"
+                                            aria-label="Download image"
+                                        >
+                                            Download Image
+                                        </button>
                                     </div>
                                 )}
 
                                  {!isLoading && !error && !displayImageLeft && (
                                     <div className="text-center text-gray-500">
-                                        <p>Upload an image to get started.</p>
+                                        <p>Upload an image or generate one with a prompt to get started.</p>
                                     </div>
                                 )}
                             </div>

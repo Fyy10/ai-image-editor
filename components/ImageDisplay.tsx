@@ -5,24 +5,10 @@ interface ImageDisplayProps {
     editedImage: string | null;
     editedText: string | null;
     onPreview: (imageUrl: string) => void;
+    onDownload: (imageUrl: string) => void;
 }
 
-export const ImageDisplay: React.FC<ImageDisplayProps> = ({ previousImage, editedImage, editedText, onPreview }) => {
-
-    const handleDownload = () => {
-        if (!editedImage) return;
-        const link = document.createElement('a');
-        link.href = editedImage;
-
-        const mimeType = editedImage.substring(editedImage.indexOf(':') + 1, editedImage.indexOf(';'));
-        const extension = mimeType.split('/')[1] || 'png';
-        
-        link.download = `edited-by-nano-banana.${extension}`;
-        
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    };
+export const ImageDisplay: React.FC<ImageDisplayProps> = ({ previousImage, editedImage, editedText, onPreview, onDownload }) => {
 
     return (
         <div className="w-full">
@@ -47,7 +33,7 @@ export const ImageDisplay: React.FC<ImageDisplayProps> = ({ previousImage, edite
                                 onClick={() => onPreview(editedImage)}
                              />
                              <button
-                                onClick={handleDownload}
+                                onClick={() => onDownload(editedImage)}
                                 className="mt-4 w-full bg-gradient-to-r from-green-500 to-teal-500 text-white font-bold py-3 px-4 rounded-lg hover:from-green-600 hover:to-teal-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-teal-500 transition-all duration-300 ease-in-out transform hover:scale-105"
                                 aria-label="Download edited image"
                             >
