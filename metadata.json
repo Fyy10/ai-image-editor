@@ -1,0 +1,5 @@
+
+{
+  "name": "Nano Banana AI Image Editor",
+  "description": "An intuitive web application that allows users to upload an image and provide a text prompt to edit it using Google's 'gemini-2.5-flash-image-preview' (Nano Banana) model. The app displays a side-by-side comparison of the original and AI-edited images."
+}
