@@ -1,12 +1,5 @@
-
 import { GoogleGenAI, Modality } from "@google/genai";
 import type { EditedImageResult } from '../types';
-
-if (!process.env.API_KEY) {
-    throw new Error("API_KEY environment variable is not set");
-}
-
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 const fileToGenerativePart = async (file: File) => {
     const base64EncodedDataPromise = new Promise<string>((resolve) => {
@@ -19,16 +12,22 @@ const fileToGenerativePart = async (file: File) => {
     };
 };
 
-export const editImageWithNanoBanana = async (imageFile: File, prompt: string): Promise<EditedImageResult> => {
+export const editImageWithNanoBanana = async (imageFile: File, prompt: string, apiKey: string): Promise<EditedImageResult> => {
+    if (!apiKey) {
+        throw new Error("API_KEY is missing.");
+    }
+    
+    const ai = new GoogleGenAI({ apiKey });
+
     try {
         const imagePart = await fileToGenerativePart(imageFile);
         const textPart = { text: prompt };
 
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash-image-preview',
-            contents: {
+            contents: [{
                 parts: [imagePart, textPart],
-            },
+            }],
             config: {
                 responseModalities: [Modality.IMAGE, Modality.TEXT],
             },
@@ -49,6 +48,10 @@ export const editImageWithNanoBanana = async (imageFile: File, prompt: string): 
         }
 
         if (!result.imageBase64) {
+            const blockReason = response.candidates?.[0]?.finishReason;
+            if (blockReason === 'SAFETY') {
+                 throw new Error("The request was blocked due to safety settings. Please modify your prompt.");
+            }
             throw new Error("The API did not return an edited image.");
         }
 
@@ -56,6 +59,10 @@ export const editImageWithNanoBanana = async (imageFile: File, prompt: string): 
 
     } catch (error) {
         console.error("Error calling Gemini API:", error);
+        if (error instanceof Error) {
+            // Re-throw specific errors to be displayed to the user
+            throw error;
+        }
         throw new Error("Failed to communicate with the AI model. Please check your API key and network connection.");
     }
 };
