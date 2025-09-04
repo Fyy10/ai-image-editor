@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 const loadingMessages = [
     "Warming up the AI's creative circuits...",
     "Mixing digital paints...",
-    "Consulting with nano bananas for inspiration...",
+    "Consulting with nano banana for inspiration...",
     "Pixel by pixel, your vision comes to life...",
     "This might take a moment, great art needs time!"
 ];
