@@ -24,6 +24,7 @@ interface HistoryItem {
 
 const App: React.FC = () => {
     const [apiKey, setApiKey] = useState<string | null>(null);
+    const [isEditingApiKey, setIsEditingApiKey] = useState<boolean>(false);
     const [history, setHistory] = useState<HistoryItem[]>([]);
     const [currentIndex, setCurrentIndex] = useState<number>(-1);
 
@@ -39,6 +40,8 @@ const App: React.FC = () => {
         const storedKey = localStorage.getItem('gemini-api-key');
         if (storedKey) {
             setApiKey(storedKey);
+        } else {
+            setIsEditingApiKey(true);
         }
     }, []);
 
@@ -48,12 +51,14 @@ const App: React.FC = () => {
     const handleSaveApiKey = (key: string) => {
         localStorage.setItem('gemini-api-key', key);
         setApiKey(key);
+        setIsEditingApiKey(false);
         setError(null);
     };
 
     const handleClearApiKey = () => {
         localStorage.removeItem('gemini-api-key');
         setApiKey(null);
+        setIsEditingApiKey(true);
         setHistory([]);
         setCurrentIndex(-1);
         setDisplayImageLeft(null);
@@ -61,6 +66,16 @@ const App: React.FC = () => {
         setEditedText(null);
         setError(null);
         setPrompt('');
+    };
+
+    const handleManageApiKey = () => {
+        setIsEditingApiKey(true);
+    };
+
+    const handleCancelEditApiKey = () => {
+        if (apiKey) {
+            setIsEditingApiKey(false);
+        }
     };
 
     const handleImageUpload = (file: File) => {
@@ -166,12 +181,16 @@ const App: React.FC = () => {
     return (
         <div className="min-h-screen bg-gray-900 text-gray-100 flex flex-col items-center p-4 sm:p-8 font-sans">
             <div className="w-full max-w-5xl mx-auto">
-                <Header onManageApiKey={handleClearApiKey} apiKeyIsSet={!!apiKey} />
+                <Header onManageApiKey={handleManageApiKey} apiKeyIsSet={!!apiKey} />
                 
                 {error && !isLoading && <div className="my-4"><ErrorDisplay message={error} /></div>}
 
-                {!apiKey ? (
-                    <ApiKeyInput onSave={handleSaveApiKey} />
+                {isEditingApiKey || !apiKey ? (
+                    <ApiKeyInput 
+                        onSave={handleSaveApiKey} 
+                        apiKey={apiKey || ''}
+                        onCancel={apiKey ? handleCancelEditApiKey : undefined}
+                    />
                 ) : (
                     <main className="mt-8 bg-gray-800/50 rounded-xl shadow-2xl p-6 md:p-8 border border-gray-700 backdrop-blur-sm">
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
