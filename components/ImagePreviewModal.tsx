@@ -9,12 +9,14 @@ export const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({ imageUrl, 
     const [scale, setScale] = useState(1);
     const [position, setPosition] = useState({ x: 0, y: 0 });
     const [isDragging, setIsDragging] = useState(false);
-    const [startPos, setStartPos] = useState({ x: 0, y: 0 });
+    const [dragStart, setDragStart] = useState({ mouseX: 0, mouseY: 0, imageX: 0, imageY: 0 });
     const [naturalSize, setNaturalSize] = useState({ width: 0, height: 0 });
     const [baseSize, setBaseSize] = useState({ width: 0, height: 0 });
 
     const imageRef = useRef<HTMLImageElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
+    const lastPositionRef = useRef({ x: 0, y: 0 });
+    const [useTransition, setUseTransition] = useState(true);
 
     const handleImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
         const img = e.currentTarget;
@@ -25,24 +27,34 @@ export const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({ imageUrl, 
     const handleMouseDown = (e: React.MouseEvent) => {
         if (scale === 1) return;
         e.preventDefault();
+        setUseTransition(false);
         setIsDragging(true);
-        setStartPos({
-            x: e.clientX - position.x,
-            y: e.clientY - position.y,
+        setDragStart({
+            mouseX: e.clientX,
+            mouseY: e.clientY,
+            imageX: position.x,
+            imageY: position.y,
         });
+        lastPositionRef.current = position;
     };
 
     const handleMouseMove = (e: React.MouseEvent) => {
-        if (!isDragging) return;
+        if (!isDragging || !imageRef.current) return;
         e.preventDefault();
-        setPosition({
-            x: e.clientX - startPos.x,
-            y: e.clientY - startPos.y,
-        });
+        const deltaX = e.clientX - dragStart.mouseX;
+        const deltaY = e.clientY - dragStart.mouseY;
+        const newX = dragStart.imageX + deltaX / scale;
+        const newY = dragStart.imageY + deltaY / scale;
+
+        lastPositionRef.current = { x: newX, y: newY };
+        imageRef.current.style.transform = `scale(${scale}) translate(${newX}px, ${newY}px)`;
     };
 
     const handleMouseUp = () => {
+        if (!isDragging) return;
         setIsDragging(false);
+        setUseTransition(true);
+        setPosition(lastPositionRef.current);
     };
 
     const handleWheel = (e: React.WheelEvent) => {
@@ -102,7 +114,7 @@ export const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({ imageUrl, 
                     ref={imageRef}
                     src={imageUrl}
                     alt="Enlarged preview"
-                    className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg shadow-2xl transition-transform duration-100"
+                    className={`max-w-[90vw] max-h-[90vh] object-contain rounded-lg shadow-2xl ${useTransition ? 'transition-transform duration-100' : ''}`}
                     style={{ transform: `scale(${scale}) translate(${position.x}px, ${position.y}px)`, cursor }}
                     onMouseDown={handleMouseDown}
                     onLoad={handleImageLoad}
