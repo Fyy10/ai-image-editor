@@ -104,7 +104,6 @@ export const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({ imageUrl, 
             <div
                 ref={containerRef}
                 className="relative w-full h-full flex justify-center items-center overflow-hidden"
-                onClick={(e) => e.stopPropagation()}
                 onMouseMove={handleMouseMove}
                 onMouseUp={handleMouseUp}
                 onMouseLeave={handleMouseUp}
@@ -118,6 +117,7 @@ export const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({ imageUrl, 
                     style={{ transform: `scale(${scale}) translate(${position.x}px, ${position.y}px)`, cursor }}
                     onMouseDown={handleMouseDown}
                     onLoad={handleImageLoad}
+                    onClick={(e) => e.stopPropagation()}
                 />
             </div>
             <div
