@@ -336,7 +336,11 @@ const App: React.FC = () => {
                 )}
             </div>
             {previewImageUrl && (
-                <ImagePreviewModal imageUrl={previewImageUrl} onClose={() => setPreviewImageUrl(null)} />
+                <ImagePreviewModal 
+                    imageUrl={previewImageUrl} 
+                    onClose={() => setPreviewImageUrl(null)}
+                    onDownload={() => handleDownload(previewImageUrl)}
+                />
             )}
         </div>
     );

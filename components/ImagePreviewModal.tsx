@@ -3,9 +3,10 @@ import React, { useState, useRef } from 'react';
 interface ImagePreviewModalProps {
     imageUrl: string;
     onClose: () => void;
+    onDownload: () => void;
 }
 
-export const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({ imageUrl, onClose }) => {
+export const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({ imageUrl, onClose, onDownload }) => {
     const [scale, setScale] = useState(1);
     const [position, setPosition] = useState({ x: 0, y: 0 });
     const [isDragging, setIsDragging] = useState(false);
@@ -143,6 +144,12 @@ export const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({ imageUrl, 
                 </button>
                 <button onClick={zoomToOriginal} className="p-2 hover:bg-gray-700 rounded-full" title="Original Size (1:1)">
                     <span className="font-bold text-sm">1:1</span>
+                </button>
+                <div className="border-l border-gray-600 h-6 mx-2"></div>
+                <button onClick={onDownload} className="p-2 hover:bg-gray-700 rounded-full" title="Download Image">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                    </svg>
                 </button>
             </div>
             <button
