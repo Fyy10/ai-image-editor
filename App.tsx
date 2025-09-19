@@ -152,6 +152,8 @@ const App: React.FC = () => {
                     }
                     setError(null);
                     setPrompt('');
+                    setDisplayImageRight(null);
+                    setEditedText(null);
                     
                     // Reset the file input
                     if (imageUploaderRef.current) {
