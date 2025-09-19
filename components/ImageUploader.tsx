@@ -1,19 +1,31 @@
-import React, { useRef, useState, useCallback } from 'react';
+import React, { useRef, useState, useCallback, forwardRef, useImperativeHandle } from 'react';
 
 interface ImageUploaderProps {
-    onImageUpload: (file: File) => void;
+    onImageUpload: (files: File[]) => void;
+    imageCount: number;
 }
 
-export const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageUpload }) => {
+export interface ImageUploaderRef {
+    reset: () => void;
+}
+
+export const ImageUploader = forwardRef<ImageUploaderRef, ImageUploaderProps>(({ onImageUpload, imageCount }, ref) => {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [dragging, setDragging] = useState(false);
-    const [fileName, setFileName] = useState<string | null>(null);
+
+    useImperativeHandle(ref, () => ({
+        reset: () => {
+            if (fileInputRef.current) {
+                fileInputRef.current.value = '';
+            }
+        }
+    }));
 
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0];
-        if (file) {
-            onImageUpload(file);
-            setFileName(file.name);
+        const files = event.target.files;
+        if (files && files.length > 0) {
+            const fileArray = Array.from(files);
+            onImageUpload(fileArray);
         }
     };
 
@@ -31,10 +43,12 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageUpload }) =
         e.preventDefault();
         e.stopPropagation();
         setDragging(false);
-        const file = e.dataTransfer.files?.[0];
-        if (file && file.type.startsWith('image/')) {
-            onImageUpload(file);
-            setFileName(file.name);
+        const files = e.dataTransfer.files;
+        if (files && files.length > 0) {
+            const imageFiles = Array.from(files).filter((file: File) => file.type.startsWith('image/'));
+            if (imageFiles.length > 0) {
+                onImageUpload(imageFiles);
+            }
         }
     }, [onImageUpload]);
 
@@ -42,9 +56,10 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageUpload }) =
 
     return (
         <div>
-            <h2 className="text-xl font-semibold mb-3 text-gray-200">Upload an Image (Optional)</h2>
+            <h2 className="text-xl font-semibold mb-3 text-gray-200">Upload Image(s) (Optional)</h2>
             <input
                 type="file"
+                multiple
                 ref={fileInputRef}
                 onChange={handleFileChange}
                 className="hidden"
@@ -63,8 +78,8 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageUpload }) =
                     <span className="font-semibold text-purple-400">Click to upload</span> or drag and drop
                 </p>
                 <p className="text-xs text-gray-500">To start by editing an existing image.</p>
-                {fileName && <p className="mt-4 text-xs text-green-400 bg-green-900/50 px-3 py-1 rounded-full">{fileName}</p>}
+                {imageCount > 0 && <p className="mt-4 text-xs text-green-400 bg-green-900/50 px-3 py-1 rounded-full">{imageCount} image{imageCount > 1 ? 's' : ''} selected</p>}
             </label>
         </div>
     );
-};
+});

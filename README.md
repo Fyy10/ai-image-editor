@@ -5,8 +5,9 @@ A web UI that leverages the Google Gemini API to generate and edit images direct
 ## ✨ Features
 
 - **Text-to-Image Generation**: Create stunning images from scratch just by describing what you want.
-- **Instruction-Based Editing**: Upload an image and provide a text prompt to perform powerful edits.
+- **Instruction-Based Editing**: Upload one or more images and provide a text prompt to perform powerful edits.
 - **Multi-Round Editing**: Edit based on the generated or edited image from the previous prompt.
+- **Multi-Image Editing**: Upload more images at any time to add new elements for editing.
 - **Interactive Preview**: Click on any image to open a full-screen preview with zoom, pan, and resize controls.
 - **Version History**: Keep track of all your edits. Easily revert to any previous version of your image.
 - **Secure, In-Browser API Key**: Your Gemini API key is stored securely in your browser's local storage, not on the server. The API request is directly sent from your browser to Gemini API service.
@@ -58,10 +59,10 @@ Alternatively, follow these instructions to set up and run the project on your l
    - Click **Generate Image**.
 
 3. **Upload and Edit an Image (Method 2)**:
-   - Click the upload area to select a file, or simply drag and drop an image.
-   - Once the image appears, type an editing instruction in the text area (e.g., "make the sky purple").
+   - Click the upload area to select one or more files, or simply drag and drop them.
+   - Once the images appear, type an editing instruction in the text area (e.g., "make the sky purple" or "combine these into a collage").
    - Click **Apply Edit**.
-   - **Note**: When uploading a new image, previous edits will be discarded, so remember to save your images :wink:.
+   - **Note**: When uploading a new image, it will be added to the image input, along with the previous edit result. The next edit will base on the previous edit and the newly uploaded images.
 
 4. **Interact with Your Creation**:
    - **Preview**: Click on the "Before", "After", or "Ready for editing" images to open an interactive, full-screen preview.
