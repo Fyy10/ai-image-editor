@@ -99,9 +99,9 @@ const App: React.FC = () => {
 
         const mimeType = imageUrl.substring(imageUrl.indexOf(':') + 1, imageUrl.indexOf(';'));
         const extension = mimeType.split('/')[1] || 'png';
-        
+
         link.download = `image-by-nano-banana.${extension}`;
-        
+
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -154,7 +154,7 @@ const App: React.FC = () => {
                     setPrompt('');
                     setDisplayImageRight(null);
                     setEditedText(null);
-                    
+
                     // Reset the file input
                     if (imageUploaderRef.current) {
                         imageUploaderRef.current.reset();
@@ -180,13 +180,13 @@ const App: React.FC = () => {
         if (index < 0 || index >= history.length) return;
 
         setCurrentIndex(index);
-        
+
         const selectedVersion = history[index];
         setDisplayImagesLeft(selectedVersion.imageDataUrls);
         setDisplayImageRight(null);
         setEditedText(null);
         setError(null);
-        
+
         setPrompt(history[index].promptUsedOnThisImage || '');
     }, [history]);
 
@@ -203,7 +203,7 @@ const App: React.FC = () => {
                 setCurrentIndex(newIndex);
                 setDisplayImagesLeft(newHistory[newIndex]?.imageDataUrls || []);
             }
-            
+
             return newHistory;
         });
     };
@@ -262,15 +262,15 @@ const App: React.FC = () => {
 
             try {
                 const result = await editImageWithNanoBanana(imagesToEdit, prompt, apiKey);
-                
+
                 setDisplayImageRight(result.imageBase64);
                 setEditedText(result.text);
 
                 if (result.imageBase64) {
                     const newImageFile = await dataUrlToFile(result.imageBase64, `edited-${Date.now()}.png`);
-                    
+
                     const newHistory = history.slice(0, currentIndex + 1);
-                    
+
                     if (newHistory[currentIndex]) {
                         newHistory[currentIndex] = {
                             ...newHistory[currentIndex],
@@ -306,17 +306,17 @@ const App: React.FC = () => {
             setEditedText(null);
             try {
                 const result = await generateImageWithNanoBanana(prompt, apiKey);
-                
+
                 if (result.imageBase64) {
                     const newImageFile = await dataUrlToFile(result.imageBase64, `generated-${Date.now()}.png`);
-                    
+
                     const newHistoryItem: HistoryItem = {
                         id: `v0-${Date.now()}`,
                         imageDataUrls: [result.imageBase64],
                         files: [newImageFile],
                         promptUsedOnThisImage: prompt,
                     };
-                    
+
                     setHistory([newHistoryItem]);
                     setCurrentIndex(0);
                     setDisplayImagesLeft(result.imageBase64);
@@ -337,18 +337,18 @@ const App: React.FC = () => {
     return (
         <div className="min-h-screen bg-gray-900 text-gray-100 flex flex-col items-center p-4 sm:p-8 font-sans">
             <div className="w-full max-w-5xl mx-auto">
-                <Header 
-                    onManageApiKey={handleManageApiKey} 
+                <Header
+                    onManageApiKey={handleManageApiKey}
                     apiKeyIsSet={!!apiKey}
                     onStartOver={handleStartOver}
                     hasHistory={history.length > 0}
                 />
-                
+
                 {error && !isLoading && <div className="my-4"><ErrorDisplay message={error} /></div>}
 
                 {isEditingApiKey || !apiKey ? (
-                    <ApiKeyInput 
-                        onSave={handleSaveApiKey} 
+                    <ApiKeyInput
+                        onSave={handleSaveApiKey}
                         apiKey={apiKey || ''}
                         onCancel={apiKey ? handleCancelEditApiKey : undefined}
                     />
@@ -356,12 +356,12 @@ const App: React.FC = () => {
                     <main className="mt-8 bg-gray-800/50 rounded-xl shadow-2xl p-6 md:p-8 border border-gray-700 backdrop-blur-sm">
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                             <div className="flex flex-col gap-6">
-                                <ImageUploader 
+                                <ImageUploader
                                     ref={imageUploaderRef}
-                                    onImageUpload={handleImageUpload} 
+                                    onImageUpload={handleImageUpload}
                                     imageCount={currentImageForEditing?.files.length || 0}
                                 />
-                                
+
                                 <div className="flex flex-col gap-2">
                                     <PromptInput
                                         prompt={prompt}
@@ -394,7 +394,7 @@ const App: React.FC = () => {
 
                             <div className="flex flex-col justify-center items-center bg-gray-900/50 p-6 rounded-lg border border-gray-700 min-h-[300px] lg:min-h-0">
                                 {isLoading && <Loader />}
-                                
+
                                 {!isLoading && !error && displayImagesLeft.length > 0 && displayImageRight && (
                                     <ImageDisplay
                                         previousImages={displayImagesLeft}
@@ -404,15 +404,15 @@ const App: React.FC = () => {
                                         onDownload={handleDownload}
                                     />
                                 )}
-                                
+
                                 {!isLoading && !error && currentImageForEditing && !displayImageRight && (
-                                   <div className="text-center text-gray-400 w-full">
+                                    <div className="text-center text-gray-400 w-full">
                                         <h3 className="text-lg font-semibold mb-4">Image{currentImageForEditing.imageDataUrls.length > 1 ? 's' : ''} Ready for Editing</h3>
                                         <div className={`grid ${currentImageForEditing.imageDataUrls.length > 1 ? 'grid-cols-2 gap-4' : 'grid-cols-1'} max-h-[500px] overflow-y-auto p-2`}>
                                             {currentImageForEditing.imageDataUrls.map((imageUrl, index) => (
                                                 <div key={index} className="relative group">
-                                                    <img 
-                                                        src={imageUrl} 
+                                                    <img
+                                                        src={imageUrl}
                                                         alt={`Ready for editing ${index + 1}`}
                                                         className="w-full h-auto rounded-lg shadow-md cursor-pointer"
                                                         onClick={() => setPreviewImageUrl(imageUrl)}
@@ -422,8 +422,8 @@ const App: React.FC = () => {
                                                         className="absolute top-2 left-2 bg-black/50 text-white rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-red-600 focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-white"
                                                         aria-label={`Remove image ${index + 1}`}
                                                     >
-                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                                            <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="size-6">
+                                                            <path fillRule="evenodd" d="M5.47 5.47a.75.75 0 0 1 1.06 0L12 10.94l5.47-5.47a.75.75 0 1 1 1.06 1.06L13.06 12l5.47 5.47a.75.75 0 1 1-1.06 1.06L12 13.06l-5.47 5.47a.75.75 0 0 1-1.06-1.06L10.94 12 5.47 6.53a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
                                                         </svg>
                                                     </button>
                                                     <button
@@ -431,8 +431,8 @@ const App: React.FC = () => {
                                                         className="absolute top-2 right-2 bg-black/50 text-white rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-black/80 focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-white"
                                                         aria-label={`Download image ${index + 1}`}
                                                     >
-                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                                            <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
+                                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="size-6">
+                                                            <path fillRule="evenodd" d="M12 2.25a.75.75 0 0 1 .75.75v11.69l3.22-3.22a.75.75 0 1 1 1.06 1.06l-4.5 4.5a.75.75 0 0 1-1.06 0l-4.5-4.5a.75.75 0 1 1 1.06-1.06l3.22 3.22V3a.75.75 0 0 1 .75-.75Zm-9 13.5a.75.75 0 0 1 .75.75v2.25a1.5 1.5 0 0 0 1.5 1.5h13.5a1.5 1.5 0 0 0 1.5-1.5V16.5a.75.75 0 0 1 1.5 0v2.25a3 3 0 0 1-3 3H5.25a3 3 0 0 1-3-3V16.5a.75.75 0 0 1 .75-.75Z" clipRule="evenodd" />
                                                         </svg>
                                                     </button>
                                                 </div>
@@ -441,7 +441,7 @@ const App: React.FC = () => {
                                     </div>
                                 )}
 
-                                 {!isLoading && !error && displayImagesLeft.length === 0 && (
+                                {!isLoading && !error && displayImagesLeft.length === 0 && (
                                     <div className="text-center text-gray-500">
                                         <p>Upload an image or generate one with a prompt to get started.</p>
                                     </div>
@@ -452,8 +452,8 @@ const App: React.FC = () => {
                 )}
             </div>
             {previewImageUrl && (
-                <ImagePreviewModal 
-                    imageUrl={previewImageUrl} 
+                <ImagePreviewModal
+                    imageUrl={previewImageUrl}
                     onClose={() => setPreviewImageUrl(null)}
                     onDownload={() => handleDownload(previewImageUrl)}
                 />
