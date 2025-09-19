@@ -9,12 +9,10 @@ interface HistoryDisplayProps {
     history: HistoryItem[];
     onRevert: (index: number) => void;
     currentIndex: number;
-    selectedIndices: number[];
-    onSelect: (index: number) => void;
     onRemove: (index: number) => void;
 }
 
-export const HistoryDisplay: React.FC<HistoryDisplayProps> = ({ history, onRevert, currentIndex, selectedIndices, onSelect, onRemove }) => {
+export const HistoryDisplay: React.FC<HistoryDisplayProps> = ({ history, onRevert, currentIndex, onRemove }) => {
 
     const handleDownload = (e: React.MouseEvent, item: HistoryItem, index: number) => {
         e.stopPropagation(); // Prevent the revert action from firing
@@ -33,28 +31,17 @@ export const HistoryDisplay: React.FC<HistoryDisplayProps> = ({ history, onRever
         document.body.removeChild(link);
     };
 
-    const handleItemClick = (index: number) => {
-        if (selectedIndices.length > 0) {
-            onSelect(index);
-        } else {
-            onRevert(index);
-        }
-    };
-
     return (
         <div>
             <h2 className="text-xl font-semibold mb-3 text-gray-200">Edit History</h2>
-            <p className="text-sm text-gray-400 mb-2">Click to revert. Long-press or right-click to select multiple images for editing.</p>
+            <p className="text-sm text-gray-400 mb-2">Click an item to revert to that version.</p>
             <div className="flex flex-wrap gap-3 p-3 bg-gray-900/50 rounded-lg border border-gray-700">
                 {history.map((item, index) => (
                      <div key={item.id} className="relative group">
                         <button
-                            onClick={() => handleItemClick(index)}
-                            onContextMenu={(e) => { e.preventDefault(); onSelect(index); }}
+                            onClick={() => onRevert(index)}
                             className={`rounded-md overflow-hidden border-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 ${
-                                selectedIndices.includes(index)
-                                    ? 'border-blue-500 scale-105 shadow-lg'
-                                : index === currentIndex
+                                index === currentIndex
                                     ? 'border-purple-500 scale-105 shadow-lg'
                                     : 'border-transparent hover:border-purple-400'
                             }`}

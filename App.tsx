@@ -1,6 +1,6 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Header } from './components/Header';
-import { ImageUploader } from './components/ImageUploader';
+import { ImageUploader, ImageUploaderRef } from './components/ImageUploader';
 import { PromptInput } from './components/PromptInput';
 import { ImageDisplay } from './components/ImageDisplay';
 import { Loader } from './components/Loader';
@@ -28,7 +28,6 @@ const App: React.FC = () => {
     const [isEditingApiKey, setIsEditingApiKey] = useState<boolean>(false);
     const [history, setHistory] = useState<HistoryItem[]>([]);
     const [currentIndex, setCurrentIndex] = useState<number>(-1);
-    const [selectedIndices, setSelectedIndices] = useState<number[]>([]);
 
     const [displayImagesLeft, setDisplayImagesLeft] = useState<string[]>([]);
     const [displayImageRight, setDisplayImageRight] = useState<string | null>(null);
@@ -38,6 +37,8 @@ const App: React.FC = () => {
     const [prompt, setPrompt] = useState<string>('');
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
+
+    const imageUploaderRef = useRef<ImageUploaderRef>(null);
 
     useEffect(() => {
         const storedKey = localStorage.getItem('gemini-api-key');
@@ -84,7 +85,6 @@ const App: React.FC = () => {
     const handleStartOver = () => {
         setHistory([]);
         setCurrentIndex(-1);
-        setSelectedIndices([]);
         setDisplayImagesLeft([]);
         setDisplayImageRight(null);
         setEditedText(null);
@@ -152,7 +152,11 @@ const App: React.FC = () => {
                     }
                     setError(null);
                     setPrompt('');
-                    setSelectedIndices([]);
+                    
+                    // Reset the file input
+                    if (imageUploaderRef.current) {
+                        imageUploaderRef.current.reset();
+                    }
                 }
             };
             reader.readAsDataURL(file);
@@ -163,7 +167,6 @@ const App: React.FC = () => {
         if (!originalImage) return;
         setHistory([originalImage]);
         setCurrentIndex(0);
-        setSelectedIndices([]);
         setDisplayImagesLeft(originalImage.imageDataUrls);
         setDisplayImageRight(null);
         setEditedText(null);
@@ -175,7 +178,6 @@ const App: React.FC = () => {
         if (index < 0 || index >= history.length) return;
 
         setCurrentIndex(index);
-        setSelectedIndices([]);
         
         const selectedVersion = history[index];
         setDisplayImagesLeft(selectedVersion.imageDataUrls);
@@ -185,16 +187,6 @@ const App: React.FC = () => {
         
         setPrompt(history[index].promptUsedOnThisImage || '');
     }, [history]);
-
-    const handleSelectHistory = (index: number) => {
-        setSelectedIndices(prev => {
-            if (prev.includes(index)) {
-                return prev.filter(i => i !== index);
-            } else {
-                return [...prev, index];
-            }
-        });
-    };
 
     const handleRemoveHistoryItem = (indexToRemove: number) => {
         setHistory(prevHistory => {
@@ -257,13 +249,11 @@ const App: React.FC = () => {
         setIsLoading(true);
         setError(null);
 
-        const imagesToEdit = selectedIndices.length > 0
-            ? selectedIndices.flatMap(i => history[i].files)
-            : currentImageForEditing ? currentImageForEditing.files : [];
+        const imagesToEdit = currentImageForEditing ? currentImageForEditing.files : [];
 
         // If there's an image, we're editing. Otherwise, we're generating.
         if (imagesToEdit.length > 0) {
-            const imagesForDisplay = currentImageForEditing ? currentImageForEditing.imageDataUrls : history[selectedIndices[0]].imageDataUrls;
+            const imagesForDisplay = currentImageForEditing!.imageDataUrls;
             setDisplayImagesLeft(imagesForDisplay);
             setDisplayImageRight(null);
             setEditedText(null);
@@ -279,7 +269,7 @@ const App: React.FC = () => {
                     
                     const newHistory = history.slice(0, currentIndex + 1);
                     
-                    if (selectedIndices.length === 0 && newHistory[currentIndex]) {
+                    if (newHistory[currentIndex]) {
                         newHistory[currentIndex] = {
                             ...newHistory[currentIndex],
                             promptUsedOnThisImage: prompt,
@@ -296,7 +286,6 @@ const App: React.FC = () => {
                     setHistory(updatedHistory);
                     setCurrentIndex(updatedHistory.length - 1);
                     setPrompt('');
-                    setSelectedIndices([]);
                 }
             } catch (err) {
                 const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
@@ -341,7 +330,7 @@ const App: React.FC = () => {
                 setIsLoading(false);
             }
         }
-    }, [currentImageForEditing, prompt, history, currentIndex, apiKey, selectedIndices]);
+    }, [currentImageForEditing, prompt, history, currentIndex, apiKey]);
 
     return (
         <div className="min-h-screen bg-gray-900 text-gray-100 flex flex-col items-center p-4 sm:p-8 font-sans">
@@ -366,6 +355,7 @@ const App: React.FC = () => {
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                             <div className="flex flex-col gap-6">
                                 <ImageUploader 
+                                    ref={imageUploaderRef}
                                     onImageUpload={handleImageUpload} 
                                     imageCount={currentImageForEditing?.files.length || 0}
                                 />
@@ -395,8 +385,6 @@ const App: React.FC = () => {
                                         history={history}
                                         onRevert={handleRevertToHistory}
                                         currentIndex={currentIndex}
-                                        selectedIndices={selectedIndices}
-                                        onSelect={handleSelectHistory}
                                         onRemove={handleRemoveHistoryItem}
                                     />
                                 )}

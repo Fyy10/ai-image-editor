@@ -1,13 +1,25 @@
-import React, { useRef, useState, useCallback } from 'react';
+import React, { useRef, useState, useCallback, forwardRef, useImperativeHandle } from 'react';
 
 interface ImageUploaderProps {
     onImageUpload: (files: File[]) => void;
     imageCount: number;
 }
 
-export const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageUpload, imageCount }) => {
+export interface ImageUploaderRef {
+    reset: () => void;
+}
+
+export const ImageUploader = forwardRef<ImageUploaderRef, ImageUploaderProps>(({ onImageUpload, imageCount }, ref) => {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [dragging, setDragging] = useState(false);
+
+    useImperativeHandle(ref, () => ({
+        reset: () => {
+            if (fileInputRef.current) {
+                fileInputRef.current.value = '';
+            }
+        }
+    }));
 
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const files = event.target.files;
@@ -70,4 +82,4 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageUpload, ima
             </label>
         </div>
     );
-};
+});
