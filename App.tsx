@@ -18,8 +18,8 @@ const dataUrlToFile = async (dataUrl: string, filename: string): Promise<File> =
 
 interface HistoryItem {
     id: string;
-    imageDataUrl: string;
-    file: File;
+    imageDataUrls: string[];
+    files: File[];
     promptUsedOnThisImage?: string; // Prompt used on THIS image to generate the NEXT one
 }
 
@@ -28,8 +28,9 @@ const App: React.FC = () => {
     const [isEditingApiKey, setIsEditingApiKey] = useState<boolean>(false);
     const [history, setHistory] = useState<HistoryItem[]>([]);
     const [currentIndex, setCurrentIndex] = useState<number>(-1);
+    const [selectedIndices, setSelectedIndices] = useState<number[]>([]);
 
-    const [displayImageLeft, setDisplayImageLeft] = useState<string | null>(null);
+    const [displayImagesLeft, setDisplayImagesLeft] = useState<string[]>([]);
     const [displayImageRight, setDisplayImageRight] = useState<string | null>(null);
     const [editedText, setEditedText] = useState<string | null>(null);
     const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
@@ -63,7 +64,7 @@ const App: React.FC = () => {
         setIsEditingApiKey(true);
         setHistory([]);
         setCurrentIndex(-1);
-        setDisplayImageLeft(null);
+        setDisplayImagesLeft([]);
         setDisplayImageRight(null);
         setEditedText(null);
         setError(null);
@@ -83,7 +84,8 @@ const App: React.FC = () => {
     const handleStartOver = () => {
         setHistory([]);
         setCurrentIndex(-1);
-        setDisplayImageLeft(null);
+        setSelectedIndices([]);
+        setDisplayImagesLeft([]);
         setDisplayImageRight(null);
         setEditedText(null);
         setError(null);
@@ -105,31 +107,64 @@ const App: React.FC = () => {
         document.body.removeChild(link);
     };
 
-    const handleImageUpload = (file: File) => {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-            const imageDataUrl = reader.result as string;
-            const initialHistoryItem: HistoryItem = {
-                id: `v0-${Date.now()}`,
-                imageDataUrl,
-                file,
+    const handleImageUpload = (files: File[]) => {
+        const newHistoryItemsData: { url: string, file: File }[] = [];
+        let loadedCount = 0;
+
+        files.forEach(file => {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                const imageDataUrl = reader.result as string;
+                newHistoryItemsData.push({ url: imageDataUrl, file });
+                loadedCount++;
+
+                if (loadedCount === files.length) {
+                    if (currentImageForEditing) {
+                        // Add to the current history item
+                        const historyIndex = currentIndex;
+                        const currentItem = history[historyIndex];
+
+                        const updatedFiles = [...currentItem.files, ...newHistoryItemsData.map(d => d.file)];
+                        const updatedImageDataUrls = [...currentItem.imageDataUrls, ...newHistoryItemsData.map(d => d.url)];
+
+                        const newItem = {
+                            ...currentItem,
+                            files: updatedFiles,
+                            imageDataUrls: updatedImageDataUrls,
+                        };
+
+                        const newHistory = [...history];
+                        newHistory[historyIndex] = newItem;
+                        setHistory(newHistory);
+                    } else {
+                        // Create a new history item
+                        const newHistoryItem: HistoryItem = {
+                            id: `v0-${Date.now()}`,
+                            imageDataUrls: newHistoryItemsData.map(d => d.url),
+                            files: newHistoryItemsData.map(d => d.file),
+                        };
+
+                        setHistory(prevHistory => [...prevHistory, newHistoryItem]);
+                        if (currentIndex === -1) {
+                            setCurrentIndex(0);
+                            setDisplayImagesLeft(newHistoryItem.imageDataUrls);
+                        }
+                    }
+                    setError(null);
+                    setPrompt('');
+                    setSelectedIndices([]);
+                }
             };
-            setHistory([initialHistoryItem]);
-            setCurrentIndex(0);
-            setDisplayImageLeft(imageDataUrl);
-            setDisplayImageRight(null);
-            setEditedText(null);
-            setError(null);
-            setPrompt('');
-        };
-        reader.readAsDataURL(file);
+            reader.readAsDataURL(file);
+        });
     };
 
     const handleReset = useCallback(() => {
         if (!originalImage) return;
         setHistory([originalImage]);
         setCurrentIndex(0);
-        setDisplayImageLeft(originalImage.imageDataUrl);
+        setSelectedIndices([]);
+        setDisplayImagesLeft(originalImage.imageDataUrls);
         setDisplayImageRight(null);
         setEditedText(null);
         setError(null);
@@ -140,15 +175,74 @@ const App: React.FC = () => {
         if (index < 0 || index >= history.length) return;
 
         setCurrentIndex(index);
+        setSelectedIndices([]);
         
         const selectedVersion = history[index];
-        setDisplayImageLeft(selectedVersion.imageDataUrl);
+        setDisplayImagesLeft(selectedVersion.imageDataUrls);
         setDisplayImageRight(null);
         setEditedText(null);
         setError(null);
         
         setPrompt(history[index].promptUsedOnThisImage || '');
     }, [history]);
+
+    const handleSelectHistory = (index: number) => {
+        setSelectedIndices(prev => {
+            if (prev.includes(index)) {
+                return prev.filter(i => i !== index);
+            } else {
+                return [...prev, index];
+            }
+        });
+    };
+
+    const handleRemoveHistoryItem = (indexToRemove: number) => {
+        setHistory(prevHistory => {
+            const newHistory = prevHistory.filter((_, index) => index !== indexToRemove);
+
+            if (newHistory.length === 0) {
+                setCurrentIndex(-1);
+                setDisplayImagesLeft([]);
+                setPrompt('');
+            } else if (currentIndex >= indexToRemove) {
+                const newIndex = Math.max(0, currentIndex - 1);
+                setCurrentIndex(newIndex);
+                setDisplayImagesLeft(newHistory[newIndex]?.imageDataUrls || []);
+            }
+            
+            return newHistory;
+        });
+    };
+
+    const handleRemoveImageFromCurrent = (imageIndexToRemove: number) => {
+        if (!currentImageForEditing) return;
+
+        const historyIndex = currentIndex;
+        const currentItem = history[historyIndex];
+
+        if (currentItem.files.length === 1) {
+            // If it's the last image, remove the whole history item
+            handleRemoveHistoryItem(historyIndex);
+        } else {
+            const newFiles = currentItem.files.filter((_, index) => index !== imageIndexToRemove);
+            const newImageDataUrls = currentItem.imageDataUrls.filter((_, index) => index !== imageIndexToRemove);
+
+            const newItem = {
+                ...currentItem,
+                files: newFiles,
+                imageDataUrls: newImageDataUrls,
+            };
+
+            const newHistory = [...history];
+            newHistory[historyIndex] = newItem;
+            setHistory(newHistory);
+
+            // Update display image if the first one was removed
+            if (imageIndexToRemove === 0) {
+                setDisplayImagesLeft(newItem.imageDataUrls || []);
+            }
+        }
+    };
 
     const handleSubmit = useCallback(async () => {
         if (!apiKey) {
@@ -163,14 +257,19 @@ const App: React.FC = () => {
         setIsLoading(true);
         setError(null);
 
+        const imagesToEdit = selectedIndices.length > 0
+            ? selectedIndices.flatMap(i => history[i].files)
+            : currentImageForEditing ? currentImageForEditing.files : [];
+
         // If there's an image, we're editing. Otherwise, we're generating.
-        if (currentImageForEditing) {
-            setDisplayImageLeft(currentImageForEditing.imageDataUrl);
+        if (imagesToEdit.length > 0) {
+            const imagesForDisplay = currentImageForEditing ? currentImageForEditing.imageDataUrls : history[selectedIndices[0]].imageDataUrls;
+            setDisplayImagesLeft(imagesForDisplay);
             setDisplayImageRight(null);
             setEditedText(null);
 
             try {
-                const result = await editImageWithNanoBanana(currentImageForEditing.file, prompt, apiKey);
+                const result = await editImageWithNanoBanana(imagesToEdit, prompt, apiKey);
                 
                 setDisplayImageRight(result.imageBase64);
                 setEditedText(result.text);
@@ -180,26 +279,30 @@ const App: React.FC = () => {
                     
                     const newHistory = history.slice(0, currentIndex + 1);
                     
-                    newHistory[currentIndex] = {
-                        ...newHistory[currentIndex],
-                        promptUsedOnThisImage: prompt,
-                    };
+                    if (selectedIndices.length === 0 && newHistory[currentIndex]) {
+                        newHistory[currentIndex] = {
+                            ...newHistory[currentIndex],
+                            promptUsedOnThisImage: prompt,
+                        };
+                    }
 
                     const newHistoryItem: HistoryItem = {
                         id: `v${newHistory.length}-${Date.now()}`,
-                        imageDataUrl: result.imageBase64,
-                        file: newImageFile,
+                        imageDataUrls: [result.imageBase64],
+                        files: [newImageFile],
                     };
 
                     const updatedHistory = [...newHistory, newHistoryItem];
                     setHistory(updatedHistory);
                     setCurrentIndex(updatedHistory.length - 1);
                     setPrompt('');
+                    setSelectedIndices([]);
                 }
             } catch (err) {
                 const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
                 setError(`Failed to edit image: ${errorMessage}`);
-                setDisplayImageLeft(currentImageForEditing.imageDataUrl);
+                const displayImages = currentImageForEditing ? currentImageForEditing.imageDataUrls : (history.length > 0 ? history[0].imageDataUrls : []);
+                setDisplayImagesLeft(displayImages);
                 setDisplayImageRight(null);
                 console.error(err);
             } finally {
@@ -207,7 +310,7 @@ const App: React.FC = () => {
             }
         } else {
             // Generate a new image
-            setDisplayImageLeft(null);
+            setDisplayImagesLeft([]);
             setDisplayImageRight(null);
             setEditedText(null);
             try {
@@ -218,14 +321,14 @@ const App: React.FC = () => {
                     
                     const newHistoryItem: HistoryItem = {
                         id: `v0-${Date.now()}`,
-                        imageDataUrl: result.imageBase64,
-                        file: newImageFile,
+                        imageDataUrls: [result.imageBase64],
+                        files: [newImageFile],
                         promptUsedOnThisImage: prompt,
                     };
                     
                     setHistory([newHistoryItem]);
                     setCurrentIndex(0);
-                    setDisplayImageLeft(result.imageBase64);
+                    setDisplayImagesLeft(result.imageBase64);
                     setDisplayImageRight(null);
                     setEditedText(result.text);
                     setPrompt('');
@@ -238,7 +341,7 @@ const App: React.FC = () => {
                 setIsLoading(false);
             }
         }
-    }, [currentImageForEditing, prompt, history, currentIndex, apiKey]);
+    }, [currentImageForEditing, prompt, history, currentIndex, apiKey, selectedIndices]);
 
     return (
         <div className="min-h-screen bg-gray-900 text-gray-100 flex flex-col items-center p-4 sm:p-8 font-sans">
@@ -262,7 +365,10 @@ const App: React.FC = () => {
                     <main className="mt-8 bg-gray-800/50 rounded-xl shadow-2xl p-6 md:p-8 border border-gray-700 backdrop-blur-sm">
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                             <div className="flex flex-col gap-6">
-                                <ImageUploader onImageUpload={handleImageUpload} />
+                                <ImageUploader 
+                                    onImageUpload={handleImageUpload} 
+                                    imageCount={currentImageForEditing?.files.length || 0}
+                                />
                                 
                                 <div className="flex flex-col gap-2">
                                     <PromptInput
@@ -289,6 +395,9 @@ const App: React.FC = () => {
                                         history={history}
                                         onRevert={handleRevertToHistory}
                                         currentIndex={currentIndex}
+                                        selectedIndices={selectedIndices}
+                                        onSelect={handleSelectHistory}
+                                        onRemove={handleRemoveHistoryItem}
                                     />
                                 )}
                             </div>
@@ -296,9 +405,9 @@ const App: React.FC = () => {
                             <div className="flex flex-col justify-center items-center bg-gray-900/50 p-6 rounded-lg border border-gray-700 min-h-[300px] lg:min-h-0">
                                 {isLoading && <Loader />}
                                 
-                                {!isLoading && !error && displayImageLeft && displayImageRight && (
+                                {!isLoading && !error && displayImagesLeft.length > 0 && displayImageRight && (
                                     <ImageDisplay
-                                        previousImage={displayImageLeft}
+                                        previousImages={displayImagesLeft}
                                         editedImage={displayImageRight}
                                         editedText={editedText}
                                         onPreview={setPreviewImageUrl}
@@ -306,26 +415,43 @@ const App: React.FC = () => {
                                     />
                                 )}
                                 
-                                {!isLoading && !error && displayImageLeft && !displayImageRight && (
-                                   <div className="text-center text-gray-400">
-                                        <h3 className="text-lg font-semibold mb-2">Image Ready for Editing</h3>
-                                        <img 
-                                            src={displayImageLeft} 
-                                            alt="Ready for editing" 
-                                            className="max-w-full max-h-96 rounded-lg shadow-md cursor-pointer"
-                                            onClick={() => setPreviewImageUrl(displayImageLeft)}
-                                        />
-                                        <button
-                                            onClick={() => handleDownload(displayImageLeft!)}
-                                            className="mt-4 w-full bg-gradient-to-r from-green-500 to-teal-500 text-white font-bold py-3 px-4 rounded-lg hover:from-green-600 hover:to-teal-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-teal-500 transition-all duration-300 ease-in-out transform hover:scale-105"
-                                            aria-label="Download image"
-                                        >
-                                            Download Image
-                                        </button>
+                                {!isLoading && !error && currentImageForEditing && !displayImageRight && (
+                                   <div className="text-center text-gray-400 w-full">
+                                        <h3 className="text-lg font-semibold mb-4">Image{currentImageForEditing.imageDataUrls.length > 1 ? 's' : ''} Ready for Editing</h3>
+                                        <div className={`grid ${currentImageForEditing.imageDataUrls.length > 1 ? 'grid-cols-2 gap-4' : 'grid-cols-1'} max-h-[500px] overflow-y-auto p-2`}>
+                                            {currentImageForEditing.imageDataUrls.map((imageUrl, index) => (
+                                                <div key={index} className="relative group">
+                                                    <img 
+                                                        src={imageUrl} 
+                                                        alt={`Ready for editing ${index + 1}`}
+                                                        className="w-full h-auto rounded-lg shadow-md cursor-pointer"
+                                                        onClick={() => setPreviewImageUrl(imageUrl)}
+                                                    />
+                                                    <button
+                                                        onClick={() => handleRemoveImageFromCurrent(index)}
+                                                        className="absolute top-2 left-2 bg-black/50 text-white rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-red-600 focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-white"
+                                                        aria-label={`Remove image ${index + 1}`}
+                                                    >
+                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                                            <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                                                        </svg>
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDownload(imageUrl)}
+                                                        className="absolute top-2 right-2 bg-black/50 text-white rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-black/80 focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-white"
+                                                        aria-label={`Download image ${index + 1}`}
+                                                    >
+                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                                            <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
+                                                        </svg>
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
                                     </div>
                                 )}
 
-                                 {!isLoading && !error && !displayImageLeft && (
+                                 {!isLoading && !error && displayImagesLeft.length === 0 && (
                                     <div className="text-center text-gray-500">
                                         <p>Upload an image or generate one with a prompt to get started.</p>
                                     </div>

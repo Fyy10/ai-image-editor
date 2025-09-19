@@ -12,7 +12,7 @@ const fileToGenerativePart = async (file: File) => {
     };
 };
 
-export const editImageWithNanoBanana = async (imageFile: File, prompt: string, apiKey: string): Promise<EditedImageResult> => {
+export const editImageWithNanoBanana = async (imageFiles: File[], prompt: string, apiKey: string): Promise<EditedImageResult> => {
     if (!apiKey) {
         throw new Error("API_KEY is missing.");
     }
@@ -20,13 +20,13 @@ export const editImageWithNanoBanana = async (imageFile: File, prompt: string, a
     const ai = new GoogleGenAI({ apiKey });
 
     try {
-        const imagePart = await fileToGenerativePart(imageFile);
+        const imageParts = await Promise.all(imageFiles.map(fileToGenerativePart));
         const textPart = { text: prompt };
 
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash-image-preview',
             contents: [{
-                parts: [imagePart, textPart],
+                parts: [...imageParts, textPart],
             }],
             config: {
                 responseModalities: [Modality.IMAGE, Modality.TEXT],
