@@ -24,7 +24,7 @@ export const editImageWithNanoBanana = async (imageFiles: File[], prompt: string
         const textPart = { text: prompt };
 
         const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash-image-preview',
+            model: 'gemini-2.5-flash-image',
             contents: [{
                 parts: [...imageParts, textPart],
             }],
@@ -78,7 +78,7 @@ export const generateImageWithNanoBanana = async (prompt: string, apiKey: string
         const textPart = { text: prompt };
 
         const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash-image-preview',
+            model: 'gemini-2.5-flash-image',
             contents: [{
                 parts: [textPart],
             }],
